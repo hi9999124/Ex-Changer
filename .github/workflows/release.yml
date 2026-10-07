@@ -1,0 +1,58 @@
+name: Release
+
+# Push a tag like v1.0.0 to build the extension zip and publish a GitHub release.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to (re)release, e.g. v1.0.0'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: Check manifest version matches the tag
+        run: |
+          TAG="${{ inputs.tag || github.ref_name }}"
+          VERSION=$(node -p "require('./extension/manifest.json').version")
+          if [ "v$VERSION" != "$TAG" ]; then
+            echo "::error::manifest.json version $VERSION does not match tag $TAG"; exit 1
+          fi
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Build zip
+        run: npm run build
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "dist/ex-changer-$VERSION.zip" --clobber
+          else
+            gh release create "$TAG" "dist/ex-changer-$VERSION.zip" \
+              --title "Ex-Changer $TAG" \
+              --notes-file docs/RELEASE_NOTES.md \
+              --target "$GITHUB_SHA"
+          fi

@@ -15,13 +15,19 @@ If a conversion fails, the original file is saved instead, so a download is neve
 
 ![Settings](docs/screenshots/settings-general.png)
 
+## Download
+
+**[⬇ Latest release](https://github.com/hi9999124/Ex-Changer/releases/latest)**: download `ex-changer-<version>.zip`.
+
 ## Install (Chrome, Edge, Brave, Opera, Vivaldi)
 
-1. Download or clone this repository.
+1. Extract the zip into a folder you will keep (or clone this repo and use its `extension/` folder).
 2. Open `chrome://extensions` (Edge: `edge://extensions`).
 3. Turn on **Developer mode**.
-4. Click **Load unpacked** and select the `extension/` folder.
+4. Click **Load unpacked** and select the folder that contains `manifest.json`.
 5. Pin Ex-Changer to the toolbar. The settings page opens on first install.
+
+Store versions (Microsoft Edge Add-ons, Chrome Web Store) are not published yet. Everything a submission needs is in [`docs/store/`](docs/store/LISTING.md): listing text, permission justifications, the [privacy policy](PRIVACY.md), screenshots and promo tiles.
 
 It needs Chrome 116 or newer. Firefox is not supported, because it has no `offscreen` documents and no `downloads.onDeterminingFilename`.
 
@@ -73,7 +79,12 @@ npm run test:e2e       # real Chromium + the extension + a fake Fandom CDN
 npm run screenshots    # docs/screenshots/*.png
 npm run icons          # regenerate extension/icons from the SVG logo
 npm run fixtures       # regenerate tests/fixtures with ffmpeg
+npm run store-assets   # docs/store/*.png (store screenshots, promo tiles, logo)
+npm run build          # dist/ex-changer-<version>.zip
 ```
+
+### Releasing
+Bump `version` in `extension/manifest.json`, commit, then push a matching tag (`git tag v1.0.1 && git push origin v1.0.1`). The **Release** workflow runs the unit tests, builds the zip and publishes a GitHub release with it.
 
 ```
 extension/

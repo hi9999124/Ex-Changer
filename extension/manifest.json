@@ -3,7 +3,7 @@
   "name": "Ex-Changer — Download Converter",
   "short_name": "Ex-Changer",
   "version": "1.0.0",
-  "description": "Converts downloads as they happen: WebP/AVIF → PNG, OGG/Opus/MPEG → MP3 and more. Fixes Fandom's 'latest.webp' / 'latest.mpeg' downloads.",
+  "description": "Auto-converts downloads: WebP/AVIF to PNG, OGG/Opus/MPEG to MP3. Fixes Fandom wiki 'latest.webp' and 'latest.mpeg' files.",
   "minimum_chrome_version": "116",
   "icons": {
     "16": "icons/icon-16.png",
