@@ -1,13 +1,15 @@
 name: Release
 
-# Push a tag like v1.0.0 to build the extension zip and publish a GitHub release.
+# Publishes a GitHub release with the extension zip, either when a tag like
+# v1.0.0 is pushed, or from the Actions tab ("Run workflow") on a branch, in
+# which case the tag is created at that branch's commit.
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Existing tag to (re)release, e.g. v1.0.0'
+        description: 'Release tag, e.g. v1.0.0 (must match manifest.json version)'
         required: true
 
 permissions:
@@ -18,8 +20,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.tag || github.ref }}
 
       - uses: actions/setup-node@v4
         with:
