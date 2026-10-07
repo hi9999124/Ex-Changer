@@ -16,7 +16,7 @@ try {
     `${FANDOM}/c/cd/Sticker.webp/revision/latest?cb=1`,
   ]) {
     await browserDownload(env.page, u);
-    await waitForJob(env.sw, (j) => j.url === u);
+    await waitForJob(env, (j) => j.url === u);
   }
 
   const shot = async (url, file, { width = 1280, height = 860, before } = {}) => {

@@ -36,7 +36,7 @@ function probe(file) {
 
 test('Fandom: PNG upload served as WebP is saved as the original PNG with its real name', async () => {
   await browserDownload(env.page, `${FANDOM}/a/ab/Character_Art.png/revision/latest/scale-to-width-down/200?cb=1`);
-  const job = await waitForJob(env.sw, (j) => j.url.includes('Character_Art'));
+  const job = await waitForJob(env, (j) => j.url.includes('Character_Art'));
   assert.equal(job.status, 'done', job.error);
   assert.notEqual(job.suggested, 'Character_Art.png', 'the browser alone would not get the name right');
   assert.equal(job.action, 'rename', 'original PNG is used as-is, not re-encoded');
@@ -50,7 +50,7 @@ test('Fandom: PNG upload served as WebP is saved as the original PNG with its re
 
 test('Fandom: real WebP upload is converted to PNG', async () => {
   await browserDownload(env.page, `${FANDOM}/c/cd/Sticker.webp/revision/latest?cb=2`);
-  const job = await waitForJob(env.sw, (j) => j.url.includes('Sticker.webp'));
+  const job = await waitForJob(env, (j) => j.url.includes('Sticker.webp'));
   assert.equal(job.status, 'done', job.error);
   assert.equal(job.action, 'convert');
   const file = await waitForFile(env.downloads, 'Sticker.png');
@@ -61,7 +61,7 @@ test('Fandom: real WebP upload is converted to PNG', async () => {
 
 test('Fandom: OGG Vorbis is decoded and re-encoded to a real MP3', async () => {
   await browserDownload(env.page, `${FANDOM}/e/ef/Main_Theme.ogg/revision/latest?cb=3`);
-  const job = await waitForJob(env.sw, (j) => j.url.includes('Main_Theme'));
+  const job = await waitForJob(env, (j) => j.url.includes('Main_Theme'));
   assert.equal(job.status, 'done', job.error);
   assert.equal(job.actual, 'ogg');
   assert.equal(job.target, 'mp3');
@@ -76,7 +76,7 @@ test('Fandom: OGG Vorbis is decoded and re-encoded to a real MP3', async () => {
 
 test('Fandom: MP3 is kept byte-for-byte, only the name is fixed', async () => {
   await browserDownload(env.page, `${FANDOM}/1/12/Battle_Song.mp3/revision/latest?cb=4`);
-  const job = await waitForJob(env.sw, (j) => j.url.includes('Battle_Song'));
+  const job = await waitForJob(env, (j) => j.url.includes('Battle_Song'));
   assert.equal(job.status, 'done', job.error);
   const file = await waitForFile(env.downloads, 'Battle_Song.mp3');
   assert.deepEqual(fs.readFileSync(file), fs.readFileSync(path.join(FIX, 'tone.mp3')));
@@ -90,7 +90,7 @@ test('"latest.mpeg" served as audio/mpeg ends up as a playable .mp3', async () =
 
 test('a ".mpeg" name forced by the server is corrected to .mp3 without re-encoding', async () => {
   await browserDownload(env.page, `${SITE}/files/named/sound`);
-  const job = await waitForJob(env.sw, (j) => j.url.endsWith('/files/named/sound'));
+  const job = await waitForJob(env, (j) => j.url.endsWith('/files/named/sound'));
   assert.equal(job.status, 'done', job.error);
   assert.equal(job.suggested.split('/').pop(), 'Fanfare.mpeg');
   assert.equal(job.actual, 'mp3');
@@ -101,7 +101,7 @@ test('a ".mpeg" name forced by the server is corrected to .mp3 without re-encodi
 
 test('MPEG-1 video: MP2 audio track is extracted, decoded and encoded to MP3', async () => {
   await browserDownload(env.page, `${SITE}/files/clip.mpeg`);
-  const job = await waitForJob(env.sw, (j) => j.url.endsWith('/files/clip.mpeg'));
+  const job = await waitForJob(env, (j) => j.url.endsWith('/files/clip.mpeg'));
   assert.equal(job.status, 'done', job.error);
   assert.equal(job.actual, 'mpeg');
   const file = await waitForFile(env.downloads, 'clip.mp3');
@@ -114,7 +114,7 @@ test('MPEG-1 video: MP2 audio track is extracted, decoded and encoded to MP3', a
 
 test('Opus is converted to MP3', async () => {
   await browserDownload(env.page, `${SITE}/files/voice.opus`);
-  const job = await waitForJob(env.sw, (j) => j.url.endsWith('/files/voice.opus'));
+  const job = await waitForJob(env, (j) => j.url.endsWith('/files/voice.opus'));
   assert.equal(job.status, 'done', job.error);
   const file = await waitForFile(env.downloads, 'voice.mp3');
   const p = probe(file);
@@ -125,13 +125,13 @@ test('a PNG with no rule is left alone (browser saves it normally)', async () =>
   await browserDownload(env.page, `${SITE}/files/photo.png`);
   const file = await waitForFile(env.downloads, 'photo.png');
   assert.deepEqual(fs.readFileSync(file), fs.readFileSync(path.join(FIX, 'img.png')));
-  const jobs = await getHistory(env.sw);
+  const jobs = await getHistory(env);
   assert.ok(!jobs.some((j) => j.url.endsWith('/files/photo.png')), 'no job created');
 });
 
 test('a corrupt WebP falls back to saving the original file', async () => {
   await browserDownload(env.page, `${SITE}/files/broken.webp`);
-  const job = await waitForJob(env.sw, (j) => j.url.endsWith('/files/broken.webp'));
+  const job = await waitForJob(env, (j) => j.url.endsWith('/files/broken.webp'));
   assert.equal(job.status, 'fallback');
   assert.match(job.error, /decode/i);
   const file = await waitForFile(env.downloads, 'broken.webp');
@@ -139,13 +139,13 @@ test('a corrupt WebP falls back to saving the original file', async () => {
 });
 
 test('paused: downloads pass through untouched', async () => {
-  await setSettings(env.sw, { enabled: false });
+  await setSettings(env, { enabled: false });
   try {
     await browserDownload(env.page, `${SITE}/files/photo.webp`);
     const file = await waitForFile(env.downloads, 'photo.webp');
     assert.deepEqual(fs.readFileSync(file), fs.readFileSync(path.join(FIX, 'img.webp')));
   } finally {
-    await setSettings(env.sw, { enabled: true });
+    await setSettings(env, { enabled: true });
   }
 });
 
@@ -155,7 +155,7 @@ test('convert-from-link with an explicit target (JPEG), as the context menu does
   await page.fill('#conv-url', `${SITE}/files/photo.webp?for=jpeg`);
   await page.selectOption('#conv-target', 'jpeg');
   await page.click('#conv-url-go');
-  const job = await waitForJob(env.sw, (j) => j.url.endsWith('for=jpeg'));
+  const job = await waitForJob(env, (j) => j.url.endsWith('for=jpeg'));
   assert.equal(job.status, 'done', job.error);
   const file = await waitForFile(env.downloads, 'photo.jpg');
   assert.ok(isJpeg(file));
@@ -176,7 +176,7 @@ test('converter page: local file drop → convert → save', async () => {
 });
 
 test('loading: Fandom images load as originals while browsing when enabled', async () => {
-  await setSettings(env.sw, { fandomLoadOriginals: true });
+  await setSettings(env, { fandomLoadOriginals: true });
   try {
     const before = srv.log.length;
     const page = await env.context.newPage();
@@ -189,7 +189,7 @@ test('loading: Fandom images load as originals while browsing when enabled', asy
     assert.ok(hits.some((l) => l.path.includes('scale-to-width-down')));
     await page.close();
   } finally {
-    await setSettings(env.sw, { fandomLoadOriginals: false });
+    await setSettings(env, { fandomLoadOriginals: false });
   }
 });
 

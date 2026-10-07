@@ -7,6 +7,42 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 
+const withTimeout = (promise, ms, what) => Promise.race([
+  promise,
+  new Promise((_, reject) => setTimeout(() => reject(new Error(`${what} timed out after ${ms} ms`)), ms)),
+]);
+const isBackground = (w) => w.url().endsWith('/src/background.js');
+
+/**
+ * Find the extension's service worker, waking it if Chrome stopped it for
+ * being idle (opening an extension page that messages it starts it again).
+ */
+async function refreshWorker(env) {
+  let sw = env.context.serviceWorkers().find(isBackground);
+  if (sw) return sw;
+  const waiting = env.context.waitForEvent('serviceworker', { predicate: isBackground, timeout: 15000 });
+  const page = await env.context.newPage();
+  await page.goto(`chrome-extension://${env.extId}/src/popup/popup.html`).catch(() => {});
+  await page.evaluate(() => chrome.runtime.sendMessage({ to: 'ex-changer', type: 'ping' }).catch(() => {})).catch(() => {});
+  sw = await waiting;
+  await page.close().catch(() => {});
+  return sw;
+}
+
+/** Evaluate in the service worker with a timeout; reconnects once if the worker went away. */
+export async function evalSw(env, fn, arg) {
+  let lastError;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await withTimeout(env.sw.evaluate(fn, arg), 8000, 'service worker evaluate');
+    } catch (e) {
+      lastError = e;
+      env.sw = await refreshWorker(env).catch(() => env.sw);
+    }
+  }
+  throw lastError;
+}
+
 export const EXT = path.resolve(new URL('../../extension', import.meta.url).pathname);
 const FIX = path.resolve(new URL('../fixtures', import.meta.url).pathname);
 const fixture = (n) => fs.readFileSync(path.join(FIX, n));
@@ -100,17 +136,13 @@ export async function launch(port) {
   const cdp = await browser.newBrowserCDPSession();
   await cdp.send('Browser.setDownloadBehavior', { behavior: 'default' });
 
-  let sw = context.serviceWorkers().find((w) => w.url().endsWith('/src/background.js'));
-  if (!sw) sw = await context.waitForEvent('serviceworker', { predicate: (w) => w.url().endsWith('/src/background.js'), timeout: 20000 });
-  const extId = new URL(sw.url()).host;
-  // Extension API bindings appear a moment after the worker starts.
+  let sw = context.serviceWorkers().find(isBackground);
+  if (!sw) sw = await context.waitForEvent('serviceworker', { predicate: isBackground, timeout: 20000 });
+  const env = { browser, context, sw, extId: new URL(sw.url()).host, downloads, userDataDir };
+  // Extension API bindings appear a moment after the worker starts, and
+  // onInstalled then writes the default settings.
   for (let i = 0; i < 50; i++) {
-    if (await sw.evaluate(() => !!(self.chrome && chrome.downloads && chrome.storage)).catch(() => false)) break;
-    await new Promise((r) => setTimeout(r, 100));
-  }
-  // Wait for onInstalled to write the default settings.
-  for (let i = 0; i < 50; i++) {
-    if (await sw.evaluate(async () => !!(await chrome.storage.sync.get('settings')).settings).catch(() => false)) break;
+    if (await evalSw(env, async () => !!(self.chrome?.downloads && (await chrome.storage.sync.get('settings')).settings)).catch(() => false)) break;
     await new Promise((r) => setTimeout(r, 100));
   }
   const page = context.pages().find((p) => p.url() === 'about:blank') || await context.newPage();
@@ -121,12 +153,12 @@ export async function launch(port) {
     await new Promise((r) => setTimeout(r, 300));
     try { fs.rmSync(userDataDir, { recursive: true, force: true, maxRetries: 5 }); } catch { /* best effort */ }
   };
-  return { browser, context, sw, extId, downloads, userDataDir, page, close };
+  return Object.assign(env, { page, close });
 }
 
 /** Patch settings from inside the extension and wait for the SW to see them. */
-export async function setSettings(sw, patch) {
-  await sw.evaluate(async (p) => {
+export async function setSettings(env, patch) {
+  await evalSw(env, async (p) => {
     const { settings } = await chrome.storage.sync.get('settings');
     await chrome.storage.sync.set({ settings: { ...settings, ...p, rules: { ...(settings?.rules || {}), ...(p.rules || {}) } } });
   }, patch);
@@ -151,13 +183,13 @@ export async function browserDownload(page, url) {
   }, url);
 }
 
-export const getHistory = (sw) => sw.evaluate(async () => (await chrome.storage.local.get('history')).history || []);
+export const getHistory = (env) => evalSw(env, async () => (await chrome.storage.local.get('history')).history || []);
 
-export async function waitForJob(sw, predicate, timeout = 30000) {
+export async function waitForJob(env, predicate, timeout = 30000) {
   const start = Date.now();
   let job = null;
   for (;;) {
-    job = (await getHistory(sw).catch(() => [])).find(predicate) || null;
+    job = (await getHistory(env).catch(() => [])).find(predicate) || null;
     if (job && ['done', 'failed', 'fallback', 'cancelled'].includes(job.status)) return job;
     if (Date.now() - start > timeout) throw new Error(`Timed out; last state: ${JSON.stringify(job)}`);
     await new Promise((r) => setTimeout(r, 200));
