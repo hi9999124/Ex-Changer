@@ -1,0 +1,20 @@
+{
+  "name": "ex-changer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Browser extension that converts downloads on the fly (WebP → PNG, OGG/MPEG → MP3, …) with Fandom wiki support.",
+  "type": "module",
+  "scripts": {
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "node --test tests/unit/*.test.mjs",
+    "test:e2e": "node --test --test-concurrency=1 tests/e2e/*.test.mjs",
+    "icons": "node scripts/make-icons.mjs",
+    "fixtures": "bash scripts/make-fixtures.sh",
+    "screenshots": "node scripts/screenshots.mjs",
+    "build": "node scripts/build-zip.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.56.1"
+  },
+  "license": "MIT"
+}

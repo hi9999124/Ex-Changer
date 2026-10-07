@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ex-Changer settings</title>
+  <link rel="icon" href="../../icons/icon-32.png">
+  <link rel="stylesheet" href="../ui/theme.css">
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="window glass-frame">
+    <aside class="sidebar">
+      <label class="search">
+        <span class="search-icon" id="search-icon"></span>
+        <input id="search" class="input" type="search" placeholder="Search" autocomplete="off" aria-label="Search settings">
+      </label>
+      <nav id="nav" aria-label="Sections"></nav>
+      <div class="side-foot">
+        <span id="engine" class="pill blue">Engine ready</span>
+      </div>
+    </aside>
+
+    <main class="content" id="content" tabindex="-1">
+      <div id="sections"></div>
+      <div id="no-results" class="no-results" hidden>
+        <strong>No settings match “<span id="q"></span>”</strong>
+        <span>Try “mp3”, “fandom”, “quality” or “folder”.</span>
+      </div>
+    </main>
+  </div>
+  <script type="module" src="options.js"></script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Ex-Changer</title>
+  <link rel="stylesheet" href="../ui/theme.css">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="top">
+      <div class="brand">
+        <span class="logo" id="logo"></span>
+        <div>
+          <h1>Ex-Changer</h1>
+          <span id="status" class="pill blue">Active</span>
+        </div>
+      </div>
+      <label class="master" title="Convert downloads automatically">
+        <span class="sr-only">Automatic conversion</span>
+        <input id="enabled" type="checkbox" class="switch" checked>
+      </label>
+    </header>
+
+    <section class="rules glass" aria-label="Active rules">
+      <div class="section-head">
+        <span>Auto-convert</span>
+        <button class="btn ghost sm" id="edit-rules">Edit</button>
+      </div>
+      <div id="rule-chips" class="chips"></div>
+    </section>
+
+    <section class="activity" aria-label="Recent conversions">
+      <div class="section-head">
+        <span>Activity</span>
+        <button class="btn ghost sm" id="clear" hidden>Clear</button>
+      </div>
+      <ul id="jobs" class="jobs" aria-live="polite">
+        <li class="skeleton" style="height:58px"></li>
+        <li class="skeleton" style="height:58px"></li>
+      </ul>
+    </section>
+
+    <footer class="bottom">
+      <button class="btn" id="open-converter"></button>
+      <button class="btn" id="open-settings"></button>
+    </footer>
+  </main>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
